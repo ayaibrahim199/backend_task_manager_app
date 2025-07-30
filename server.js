@@ -7,7 +7,7 @@ const app = express();
 
 // Use CORS to allow connections from your frontend
 app.use(cors({
-    origin: 'http://127.0.0.1:5500', 
+    origin: ['http://127.0.0.1:5500', 'https://frontend-task-manager-app.vercel.app'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'], 
     allowedHeaders: ['Content-Type', 'Authorization'] 
 }));
