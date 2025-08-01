@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const taskSchema = new mongoose.Schema({
-    text: {
+    description: { // تم تعديل الاسم من text إلى description
         type: String,
-        required: [true, 'Task text is required!'],
+        required: [true, 'Task description is required!'],
         trim: true,
         maxlength: [100, 'Task text cannot be more than 100 characters']
     },
@@ -11,14 +11,13 @@ const taskSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    // **هذا هو الحقل الجديد الذي يربط المهمة بالمستخدم**
     owner: {
-        type: mongoose.Schema.Types.ObjectId, // نوع البيانات هو معرف (ID) من MongoDB
-        required: true,                     // يجب أن تكون المهمة مرتبطة بمستخدم
-        ref: 'User'                         // تشير إلى الـ 'User' model
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'User'
     }
 }, {
-    timestamps: true // لإنشاء حقول createdAt و updatedAt تلقائيًا
+    timestamps: true
 });
 
 const Task = mongoose.model('Task', taskSchema);

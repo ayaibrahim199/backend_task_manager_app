@@ -19,7 +19,7 @@ const Task = require('./models/Task');
 // Cors middleware (This must come first to handle pre-flight requests)
 app.use(cors({
     origin: ['http://127.0.0.1:5500', 'https://frontend-task-manager-app.vercel.app'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -29,7 +29,7 @@ app.use(express.json());
 // Diagnostic log middleware
 app.use((req, res, next) => {
     console.log(`Incoming Request: ${req.method} ${req.url}`);
-    if (req.method === 'POST' || req.method === 'PUT') {
+    if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
         console.log('Request Body:', req.body);
     }
     next();
@@ -48,7 +48,7 @@ mongoose.connect(process.env.MONGO_URI)
 // (7) Define Routes
 app.use('/api/auth', require('./routes/auth'));
 
-// Task routes (now protected)
+// Task routes
 app.get('/api/tasks', protect, async (req, res) => {
     try {
         const tasks = await Task.find({ owner: req.user });
@@ -59,13 +59,13 @@ app.get('/api/tasks', protect, async (req, res) => {
 });
 
 app.post('/api/tasks', protect, async (req, res) => {
-    const { text } = req.body;
-    if (!text) {
-        return res.status(400).json({ message: 'Task text is required' });
+    const { description } = req.body; // 
+    if (!description) {
+        return res.status(400).json({ message: 'Task description is required' });
     }
     try {
         const newTask = new Task({
-            text,
+            description,
             owner: req.user
         });
         await newTask.save();
@@ -75,9 +75,10 @@ app.post('/api/tasks', protect, async (req, res) => {
     }
 });
 
-app.put('/api/tasks/:id', protect, async (req, res) => {
+// Route to toggle a task's completion status (PATCH method to be RESTful)
+app.patch('/api/tasks/:id/complete', protect, async (req, res) => {
     const { id } = req.params;
-    const { text, completed } = req.body;
+    const { completed } = req.body;
     try {
         const task = await Task.findById(id);
 
@@ -89,7 +90,31 @@ app.put('/api/tasks/:id', protect, async (req, res) => {
             return res.status(401).json({ message: 'Not authorized to update this task' });
         }
 
-        task.text = text !== undefined ? text : task.text;
+        task.completed = completed !== undefined ? completed : task.completed;
+        await task.save();
+
+        res.json(task);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating task', error: error.message });
+    }
+});
+
+// General PUT route to update task details
+app.put('/api/tasks/:id', protect, async (req, res) => {
+    const { id } = req.params;
+    const { description, completed } = req.body;
+    try {
+        const task = await Task.findById(id);
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        if (task.owner.toString() !== req.user) {
+            return res.status(401).json({ message: 'Not authorized to update this task' });
+        }
+
+        task.description = description !== undefined ? description : task.description;
         task.completed = completed !== undefined ? completed : task.completed;
         await task.save();
 
@@ -126,8 +151,9 @@ app.listen(PORT, () => {
     console.log('API Endpoints:');
     console.log(`- POST /api/auth/register`);
     console.log(`- POST /api/auth/login`);
-    console.log(`- GET /api/tasks (currently unprotected)`);
-    console.log(`- POST /api/tasks (currently unprotected)`);
-    console.log(`- PUT /api/tasks/:id (currently unprotected)`);
-    console.log(`- DELETE /api/tasks/:id (currently unprotected)`);
+    console.log(`- GET /api/tasks`);
+    console.log(`- POST /api/tasks`);
+    console.log(`- PATCH /api/tasks/:id/complete`);
+    console.log(`- PUT /api/tasks/:id`);
+    console.log(`- DELETE /api/tasks/:id`);
 });
